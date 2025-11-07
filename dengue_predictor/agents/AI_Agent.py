@@ -127,157 +127,6 @@ without sending raw patient data to the AI model, significantly reducing token u
     
     return context
 
-# Define tools for the AI agent
-tools = [
-    {
-        "name": "predict_dengue_risk",
-        "description": "Predicts dengue risk for a specific case based on patient and area data. Returns probability score and risk level.",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "age": {"type": "integer", "description": "Patient age"},
-                "gender": {"type": "integer", "description": "0=Female, 1=Male"},
-                "ns1": {"type": "integer", "description": "NS1 test result (0=Negative, 1=Positive)"},
-                "igg": {"type": "integer", "description": "IgG antibody (0=Negative, 1=Positive)"},
-                "igm": {"type": "integer", "description": "IgM antibody (0=Negative, 1=Positive)"},
-                "area": {"type": "string", "description": "Area name"},
-                "district": {"type": "string", "description": "District name"}
-            },
-            "required": ["age", "gender", "ns1", "igg", "igm", "area", "district"]
-        }
-    },
-    {
-        "name": "search_similar_cases",
-        "description": "Searches historical dengue cases with similar characteristics. Useful for finding patterns and precedents.",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "query": {"type": "string", "description": "Natural language description of case to search for"}
-            },
-            "required": ["query"]
-        }
-    },
-    {
-        "name": "get_area_statistics",
-        "description": "Gets historical dengue statistics for a specific area including average risk, case counts, and positive rates.",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "district": {"type": "string", "description": "District name"},
-                "area": {"type": "string", "description": "Area name"}
-            },
-            "required": ["district", "area"]
-        }
-    }
-]
-
-def predict_dengue_risk_tool(age, gender, ns1, igg, igm, area, district):
-    """Execute prediction using the ML model"""
-    import numpy as np
-    import pandas as pd
-    
-    # List of all areas from the model
-    all_areas = ['Adabor', 'Badda', 'Banasree', 'Bangshal', 'Biman Bandar', 'Bosila', 
-                 'Cantonment', 'Chawkbazar', 'Demra', 'Dhanmondi', 'Gendaria', 'Gulshan', 
-                 'Hazaribagh', 'Jatrabari', 'Kadamtali', 'Kafrul', 'Kalabagan', 'Kamrangirchar',
-                 'Keraniganj', 'Khilgaon', 'Khilkhet', 'Lalbagh', 'Mirpur', 'Mohammadpur', 
-                 'Motijheel', 'New Market', 'Pallabi', 'Paltan', 'Ramna', 'Rampura', 'Sabujbagh', 
-                 'Shahbagh', 'Sher-e-Bangla Nagar', 'Shyampur', 'Sutrapur', 'Tejgaon']
-    
-    # Create a dataframe with all the required features
-    # Based on the feature names we discovered
-    feature_data = {
-        'Gender': [gender],
-        'Age': [age],
-        'NS1': [ns1],
-        'IgG': [igg],
-        'IgM': [igm]
-    }
-    
-    # Add area features (one-hot encoded)
-    for area_name in all_areas:
-        feature_data[f'Area_{area_name}'] = [1 if area == area_name else 0]
-    
-    # Add other categorical features
-    feature_data['AreaType_Developed'] = [0]  # Default value
-    feature_data['AreaType_Undeveloped'] = [1]  # Default value
-    feature_data['District_Dhaka'] = [1 if district == 'Dhaka' else 0]
-    feature_data['HouseType_Building'] = [1]  # Default value
-    feature_data['HouseType_Other'] = [0]  # Default value
-    feature_data['HouseType_Tinshed'] = [0]  # Default value
-    
-    # Create DataFrame
-    feature_df = pd.DataFrame(feature_data)
-    
-    # Get probability
-    probability = float(model.predict_proba(feature_df)[0][1])
-    
-    risk_level = "High" if probability >= 0.7 else "Medium" if probability >= 0.4 else "Low"
-    
-    # Get location-based context for Gemini
-    location_context = create_location_context(area, district)
-    
-    # Return data for Gemini to analyze and generate response
-    return {
-        "probability": round(probability, 3),
-        "risk_level": risk_level,
-        "age": age,
-        "gender": "Male" if gender == 1 else "Female",
-        "ns1": "Positive" if ns1 == 1 else "Negative",
-        "igg": "Positive" if igg == 1 else "Negative",
-        "igm": "Positive" if igm == 1 else "Negative",
-        "area": area,
-        "district": district,
-        "location_context": location_context
-    }
-
-def process_tool_call(tool_name, tool_input):
-    """Route tool calls to appropriate functions"""
-    
-    if tool_name == "predict_dengue_risk":
-        return predict_dengue_risk_tool(**tool_input)
-    
-    elif tool_name == "search_similar_cases":
-        results = search_similar_cases(tool_input["query"], n_results=3)
-        matches = results.get('matches', [])
-        return {
-            "similar_cases": [
-                {
-                    "description": match['metadata'].get('description', '')[:200],
-                    "risk_score": match['metadata'].get('risk_score', 0),
-                    "outcome": match['metadata'].get('outcome', 0),
-                    "area": match['metadata'].get('area', ''),
-                    "district": match['metadata'].get('district', '')
-                }
-                for match in matches
-            ]
-        }
-    
-    elif tool_name == "get_area_statistics":
-        stats = get_area_statistics(
-            tool_input["district"],
-            tool_input["area"]
-        )
-        
-        # Enhance statistics with future risk predictions
-        if stats:
-            # Simple prediction based on current statistics
-            avg_risk = stats.get("avg_risk_score", 0)
-            if avg_risk >= 0.7:
-                future_risk = "High risk expected to continue for the next 2-4 months. Enhanced prevention measures strongly recommended."
-            elif avg_risk >= 0.4:
-                future_risk = "Moderate risk likely to persist over the next 2-4 months. Maintain preventive practices."
-            else:
-                future_risk = "Low risk expected to continue for the next 2-4 months. Continue routine monitoring."
-            
-            stats["future_risk_prediction"] = future_risk
-            
-            # Add location context for Gemini to analyze
-            location_context = create_location_context(tool_input["area"], tool_input["district"])
-            stats["location_context"] = location_context
-        
-        return stats or {"error": "No historical data found for this area"}
-
 def chat_with_dengue_agent(user_message, conversation_history=None):
     """
     Main chat interface with the AI agent
@@ -320,6 +169,15 @@ def chat_with_dengue_agent(user_message, conversation_history=None):
     
     When risk assessment context is provided, use it to give highly personalized advice.
     Include specific recommendations based on the risk level, patient demographics, and location.
+    
+    Structure your responses in a clear, organized format with:
+    1. Risk Level Analysis
+    2. Immediate Actions Required
+    3. Dietary Recommendations
+    4. Lifestyle Modifications
+    5. Prevention Measures
+    6. Medical Guidance
+    7. Local Resources (if requested)
     """
     
     full_prompt = system_prompt + "\nUser query: " + user_message

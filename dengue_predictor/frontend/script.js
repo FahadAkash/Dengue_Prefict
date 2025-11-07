@@ -152,11 +152,16 @@ predictionForm.addEventListener('submit', async function(e) {
             district: data.District
         };
         
-        // Display results
+        // Display results with minimal information, let AI agent provide detailed recommendations
         displayResults(result);
         
-        // Add result to chat with context-aware message
-        addBotMessage(`I've analyzed the patient data. The dengue risk is ${Math.round(result.probability * 100)}% (${result.risk_level} risk). I can provide detailed recommendations based on this assessment. What would you like to know?`);
+        // Add result to chat with context-aware message to get detailed recommendations
+        addBotMessage(`I've analyzed the patient data. The dengue risk is ${Math.round(result.probability * 100)}% (${result.risk_level} risk). Let me provide you with detailed, personalized recommendations based on this assessment. What would you like to know first?`);
+        
+        // Automatically ask AI agent for detailed recommendations
+        setTimeout(() => {
+            requestDetailedRecommendations();
+        }, 1000);
         
     } catch (error) {
         console.error('Error during prediction:', error);
@@ -168,6 +173,62 @@ predictionForm.addEventListener('submit', async function(e) {
         `;
     }
 });
+
+// Request detailed recommendations from AI agent
+async function requestDetailedRecommendations() {
+    if (!currentRiskAssessment) return;
+    
+    // Show typing indicator
+    const typingIndicator = document.createElement('div');
+    typingIndicator.className = 'message bot-message typing-indicator';
+    typingIndicator.innerHTML = `
+        <div class="avatar">
+            <i class="fas fa-robot"></i>
+        </div>
+        <div class="message-content">
+            <p><i class="fas fa-circle"></i><i class="fas fa-circle"></i><i class="fas fa-circle"></i></p>
+        </div>
+    `;
+    chatMessages.appendChild(typingIndicator);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+    
+    try {
+        // Send request to AI agent for detailed recommendations
+        const chatPayload = {
+            message: "Please provide detailed recommendations for this dengue risk assessment including diet, lifestyle, prevention measures, and when to seek medical help.",
+            conversation_history: conversationHistory,
+            risk_assessment: currentRiskAssessment
+        };
+        
+        const response = await fetch('/chat', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(chatPayload)
+        });
+        
+        // Remove typing indicator
+        typingIndicator.remove();
+        
+        if (!response.ok) {
+            throw new Error(`Chat error: ${response.status} ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        conversationHistory = data.conversation_history;
+        
+        // Add bot response to chat
+        addBotMessage(data.response);
+        
+    } catch (error) {
+        // Remove typing indicator
+        typingIndicator.remove();
+        
+        console.error('Chat error:', error);
+        addBotMessage("Sorry, I encountered an error while generating detailed recommendations. Please try asking me directly.");
+    }
+}
 
 // Chat Functionality
 sendBtn.addEventListener('click', sendMessage);
@@ -262,12 +323,18 @@ function addUserMessage(message) {
 function addBotMessage(message) {
     const messageElement = document.createElement('div');
     messageElement.className = 'message bot-message';
+    
+    // Convert markdown bold syntax to HTML bold tags
+    const formattedMessage = message
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')  // Convert **text** to <strong>text</strong>
+        .replace(/\n/g, '<br>');  // Convert newlines to <br> tags
+    
     messageElement.innerHTML = `
         <div class="avatar">
             <i class="fas fa-robot"></i>
         </div>
         <div class="message-content">
-            <p>${message}</p>
+            <p>${formattedMessage}</p>
         </div>
     `;
     chatMessages.appendChild(messageElement);
@@ -277,13 +344,6 @@ function addBotMessage(message) {
 function displayResults(result) {
     const riskClass = result.risk_level.toLowerCase();
     const riskColor = riskClass === 'high' ? '#f44336' : riskClass === 'medium' ? '#ff9800' : '#4caf50';
-    
-    // Format the recommendation text
-    let formattedRecommendation = result.recommendation;
-    if (formattedRecommendation) {
-        // Convert newlines to HTML breaks
-        formattedRecommendation = formattedRecommendation.replace(/\n/g, '<br>');
-    }
     
     resultsContainer.innerHTML = `
         <div class="risk-result">
@@ -300,7 +360,9 @@ function displayResults(result) {
             <div class="recommendations">
                 <h3><i class="fas fa-lightbulb"></i> Recommendations</h3>
                 <div class="recommendation-content">
-                    ${formattedRecommendation || 'No specific recommendations available.'}
+                    <p>For detailed, personalized recommendations, please consult with the AI assistant. 
+                    The AI will provide specific guidance based on your risk level, patient profile, 
+                    and location context.</p>
                 </div>
             </div>
             
@@ -320,6 +382,6 @@ function displayResults(result) {
 
 // Initialize with a welcome message
 document.addEventListener('DOMContentLoaded', function() {
-    addBotMessage("Hello! I'm your Dengue Intelligence Assistant. Enter patient information in the form to get started with risk assessment, or ask me anything about dengue prevention and treatment.");
+    addBotMessage("Hello! I'm your Dengue Intelligence Assistant. Enter patient information in the form to get started with risk assessment, and I'll provide detailed, personalized recommendations based on the AI analysis.");
     console.log('Dengue Risk Predictor frontend initialized');
 });
