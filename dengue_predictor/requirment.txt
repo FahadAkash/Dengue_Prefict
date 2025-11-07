@@ -1,0 +1,56 @@
+# Core ML and Data Science
+numpy==1.24.3
+pandas==2.0.3
+scikit-learn==1.3.0
+joblib==1.3.2
+
+# API Framework
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pydantic==2.5.0
+
+# Database - SQLite (built-in with Python)
+# No additional packages needed for basic SQLite
+
+# Vector Search with Pinecone
+pinecone==5.0.1
+
+# AI/LLM Integration
+google-generativeai==0.7.0
+langchain==0.1.0
+langchain-community==0.0.10
+
+# Data Processing
+openpyxl==3.1.2  # For Excel files
+python-multipart==0.0.6  # For file uploads
+
+# Visualization (optional)
+matplotlib==3.8.0
+seaborn==0.13.0
+plotly==5.18.0
+
+# Web Server (production)
+gunicorn==21.2.0
+
+# Utilities
+python-dotenv==1.0.0  # For environment variables
+requests==2.31.0
+httpx==0.25.2
+
+# Database (if needed)
+sqlalchemy==2.0.23
+psycopg2-binary==2.9.9  # PostgreSQL
+pymongo==4.6.0  # MongoDB
+# Pinecone DB
+dotenv==0.10.0  # For Pinecone API key
+
+# Testing
+pytest==7.4.3
+pytest-asyncio==0.21.1
+httpx==0.25.2  # For testing FastAPI
+
+# Development
+black==23.12.0  # Code formatter
+flake8==6.1.0  # Linter
+ipython==8.18.1  # Better Python shell
+jupyter==1.0.0  # Notebooks
