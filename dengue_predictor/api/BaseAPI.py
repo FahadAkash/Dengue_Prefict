@@ -50,10 +50,75 @@ def get_risk_level(prob: float) -> str:
 
 def get_recommendation(prob: float, area: str) -> str:
     if prob >= 0.7:
-        return f"High risk detected in {area}. Immediate mosquito control and public awareness campaigns recommended."
+        return f"""HIGH RISK ({prob*100:.1f}%)
+
+🔴 IMMEDIATE ACTIONS REQUIRED:
+- Consult a healthcare provider immediately, especially if experiencing fever, headache, or joint pain
+- Avoid outdoor activities during peak mosquito hours (dawn & dusk)
+- Stay in air-conditioned or well-screened areas
+- Eliminate standing water around your home (flower pots, containers, gutters)
+- Wear long-sleeved shirts and long pants in light colors
+
+💊 HEALTH RECOMMENDATIONS:
+- Stay hydrated with clean, boiled water
+- Take vitamin C supplements to boost immunity
+- Consider papaya leaf extract (consult doctor first)
+- Avoid aspirin or ibuprofen (may increase bleeding risk)
+
+🚫 AVOID:
+- Stagnant water bodies
+- Dark clothing (attracts mosquitoes)
+- Perfumes or scented products
+- Leaving windows/doors open without screens
+
+🌡️ SEEK IMMEDIATE MEDICAL HELP IF:
+- High fever develops
+- Severe headache or pain behind eyes
+- Joint/muscle pain
+- Nausea or vomiting
+
+📅 2-4 MONTH OUTLOOK: Historically, {area} shows continued elevated risk during this period. Enhanced vigilance required."""
     elif prob >= 0.4:
-        return f"Moderate risk in {area}. Increase surveillance and prepare response resources."
-    return f"Low risk in {area}. Continue routine monitoring."
+        return f"""MEDIUM RISK ({prob*100:.1f}%)
+
+🟡 ENHANCED PREVENTION NEEDED:
+- Take preventive measures against mosquito bites
+- Check and repair window/door screens
+- Use mosquito repellent when outdoors
+- Clear any standing water weekly
+
+🥗 DIETARY GUIDELINES:
+- Increase vitamin C intake (citrus fruits, berries)
+- Consume papaya, pomegranate, and kiwi for platelet support
+- Stay well-hydrated
+- Include garlic and neem in your diet for natural mosquito repellent properties
+
+💪 DAILY LIFESTYLE:
+- Wear protective clothing during peak mosquito hours
+- Use mosquito nets while sleeping
+- Install or check window screens
+- Exercise regularly to boost immunity
+
+📅 2-4 MONTH OUTLOOK: {area} shows moderate risk trends. Continue preventive measures."""
+    else:
+        return f"""LOW RISK ({prob*100:.1f}%)
+
+🟢 GENERAL PREVENTION:
+- Maintain basic mosquito prevention habits
+- Regularly check for and eliminate standing water
+- Use mosquito repellent during peak hours
+
+🥗 HEALTHY HABITS:
+- Balanced diet rich in vitamins and minerals
+- Adequate sleep (7-8 hours) for strong immunity
+- Regular exercise
+- Stay hydrated
+
+💊 SUPPLEMENTS:
+- Daily multivitamin
+- Vitamin D if limited sun exposure
+
+📅 2-4 MONTH OUTLOOK: {area} historically shows low risk. Continue routine monitoring."""
 
 @app.post("/predict", response_model=PredictionResponse)
 async def predict_dengue(data: PatientData):

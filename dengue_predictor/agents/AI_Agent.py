@@ -3,6 +3,8 @@ import joblib
 import json
 import os
 import sys
+import pandas as pd
+from collections import Counter
 
 # Add the parent directory to the path to import from db
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'db'))
@@ -23,9 +25,107 @@ if not api_key:
 model_path = os.path.join(os.path.dirname(__file__), '..', 'core', 'models', 'logistic_regression_model.joblib')
 model = joblib.load(model_path)
 
+# Load dataset for statistical analysis (but not for sending to Gemini)
+dataset_path = os.path.join(os.path.dirname(__file__), '..', 'datasets', 'dataset.csv')
+dataset_df = None
+try:
+    if os.path.exists(dataset_path):
+        # Load only once and keep in memory
+        dataset_df = pd.read_csv(dataset_path)
+        print(f"Loaded dataset with {len(dataset_df)} records for statistical analysis")
+except Exception as e:
+    print(f"Could not load dataset for analysis: {e}")
+
 # Initialize Gemini Flash model with correct model name
 genai.configure(api_key=api_key)
 llm = genai.GenerativeModel('models/gemini-2.0-flash')
+
+def get_location_based_stats(area, district, n_samples=50):
+    """
+    Get location-based statistics without sending large amounts of data to Gemini.
+    Returns a summarized view of the data for the specific location.
+    """
+    if dataset_df is None:
+        return "No historical dataset available for analysis."
+    
+    # Filter data for the specific area and district
+    location_data = dataset_df[
+        (dataset_df['Area'] == area) & 
+        (dataset_df['District'] == district)
+    ]
+    
+    if len(location_data) == 0:
+        # If no exact match, try just the district
+        location_data = dataset_df[dataset_df['District'] == district]
+        if len(location_data) == 0:
+            return "No historical data available for this location."
+    
+    # If we have too much data, sample it
+    if len(location_data) > n_samples:
+        location_data = location_data.sample(n=n_samples, random_state=42)
+    
+    # Calculate key statistics
+    total_cases = len(location_data)
+    positive_cases = location_data['Outcome'].sum()
+    positive_rate = positive_cases / total_cases if total_cases > 0 else 0
+    
+    # Age distribution
+    avg_age = location_data['Age'].mean()
+    age_groups = pd.cut(location_data['Age'], bins=[0, 18, 35, 50, 100], labels=['Child', 'Young Adult', 'Adult', 'Senior'])
+    age_distribution = pd.Series(age_groups).value_counts().to_dict()
+    
+    # Gender distribution
+    gender_distribution = pd.Series(location_data['Gender']).value_counts().to_dict()
+    
+    # Test result patterns
+    ns1_positive = location_data[location_data['NS1'] == 1].shape[0]
+    igg_positive = location_data[location_data['IgG'] == 1].shape[0]
+    igm_positive = location_data[location_data['IgM'] == 1].shape[0]
+    
+    # Area type distribution
+    area_type_distribution = pd.Series(location_data['AreaType']).value_counts().to_dict()
+    
+    # Create a concise summary
+    summary = {
+        "total_cases_analyzed": total_cases,
+        "dengue_positive_rate": round(positive_rate * 100, 2),
+        "average_age": round(avg_age, 1),
+        "age_distribution": {str(k): int(v) for k, v in age_distribution.items()},
+        "gender_distribution": {str(k): int(v) for k, v in gender_distribution.items()},
+        "test_patterns": {
+            "ns1_positive_rate": round(ns1_positive/total_cases * 100, 2) if total_cases > 0 else 0,
+            "igg_positive_rate": round(igg_positive/total_cases * 100, 2) if total_cases > 0 else 0,
+            "igm_positive_rate": round(igm_positive/total_cases * 100, 2) if total_cases > 0 else 0
+        },
+        "area_characteristics": {str(k): int(v) for k, v in area_type_distribution.items()}
+    }
+    
+    return summary
+
+def create_location_context(area, district):
+    """
+    Create a concise context for Gemini based on location data.
+    This significantly reduces token usage while preserving key insights.
+    """
+    stats = get_location_based_stats(area, district)
+    
+    if isinstance(stats, str):
+        return stats  # Error message
+    
+    context = f"""
+LOCATION ANALYSIS FOR {area}, {district}:
+- Dengue Positive Rate: {stats['dengue_positive_rate']}% ({stats['total_cases_analyzed']} cases analyzed)
+- Average Patient Age: {stats['average_age']} years
+- Age Distribution: {stats['age_distribution']}
+- Gender Distribution: {stats['gender_distribution']}
+- Common Test Patterns: NS1 {stats['test_patterns']['ns1_positive_rate']}%, IgG {stats['test_patterns']['igg_positive_rate']}%, IgM {stats['test_patterns']['igm_positive_rate']}%
+- Area Type: {stats['area_characteristics']}
+
+This summary is based on statistical analysis of historical data and provides key insights 
+without sending raw patient data to the AI model, significantly reducing token usage.
+"""
+    
+    return context
 
 # Define tools for the AI agent
 tools = [
@@ -76,6 +176,14 @@ def predict_dengue_risk_tool(age, gender, ns1, igg, igm, area, district):
     import numpy as np
     import pandas as pd
     
+    # List of all areas from the model
+    all_areas = ['Adabor', 'Badda', 'Banasree', 'Bangshal', 'Biman Bandar', 'Bosila', 
+                 'Cantonment', 'Chawkbazar', 'Demra', 'Dhanmondi', 'Gendaria', 'Gulshan', 
+                 'Hazaribagh', 'Jatrabari', 'Kadamtali', 'Kafrul', 'Kalabagan', 'Kamrangirchar',
+                 'Keraniganj', 'Khilgaon', 'Khilkhet', 'Lalbagh', 'Mirpur', 'Mohammadpur', 
+                 'Motijheel', 'New Market', 'Pallabi', 'Paltan', 'Ramna', 'Rampura', 'Sabujbagh', 
+                 'Shahbagh', 'Sher-e-Bangla Nagar', 'Shyampur', 'Sutrapur', 'Tejgaon']
+    
     # Create a dataframe with all the required features
     # Based on the feature names we discovered
     feature_data = {
@@ -83,50 +191,20 @@ def predict_dengue_risk_tool(age, gender, ns1, igg, igm, area, district):
         'Age': [age],
         'NS1': [ns1],
         'IgG': [igg],
-        'IgM': [igm],
-        'Area_Adabor': [1 if area == 'Adabor' else 0],
-        'Area_Badda': [1 if area == 'Badda' else 0],
-        'Area_Banasree': [1 if area == 'Banasree' else 0],
-        'Area_Bangshal': [1 if area == 'Bangshal' else 0],
-        'Area_Biman Bandar': [1 if area == 'Biman Bandar' else 0],
-        'Area_Bosila': [1 if area == 'Bosila' else 0],
-        'Area_Cantonment': [1 if area == 'Cantonment' else 0],
-        'Area_Chawkbazar': [1 if area == 'Chawkbazar' else 0],
-        'Area_Demra': [1 if area == 'Demra' else 0],
-        'Area_Dhanmondi': [1 if area == 'Dhanmondi' else 0],
-        'Area_Gendaria': [1 if area == 'Gendaria' else 0],
-        'Area_Gulshan': [1 if area == 'Gulshan' else 0],
-        'Area_Hazaribagh': [1 if area == 'Hazaribagh' else 0],
-        'Area_Jatrabari': [1 if area == 'Jatrabari' else 0],
-        'Area_Kadamtali': [1 if area == 'Kadamtali' else 0],
-        'Area_Kafrul': [1 if area == 'Kafrul' else 0],
-        'Area_Kalabagan': [1 if area == 'Kalabagan' else 0],
-        'Area_Kamrangirchar': [1 if area == 'Kamrangirchar' else 0],
-        'Area_Keraniganj': [1 if area == 'Keraniganj' else 0],
-        'Area_Khilgaon': [1 if area == 'Khilgaon' else 0],
-        'Area_Khilkhet': [1 if area == 'Khilkhet' else 0],
-        'Area_Lalbagh': [1 if area == 'Lalbagh' else 0],
-        'Area_Mirpur': [1 if area == 'Mirpur' else 0],
-        'Area_Mohammadpur': [1 if area == 'Mohammadpur' else 0],
-        'Area_Motijheel': [1 if area == 'Motijheel' else 0],
-        'Area_New Market': [1 if area == 'New Market' else 0],
-        'Area_Pallabi': [1 if area == 'Pallabi' else 0],
-        'Area_Paltan': [1 if area == 'Paltan' else 0],
-        'Area_Ramna': [1 if area == 'Ramna' else 0],
-        'Area_Rampura': [1 if area == 'Rampura' else 0],
-        'Area_Sabujbagh': [1 if area == 'Sabujbagh' else 0],
-        'Area_Shahbagh': [1 if area == 'Shahbagh' else 0],
-        'Area_Sher-e-Bangla Nagar': [1 if area == 'Sher-e-Bangla Nagar' else 0],
-        'Area_Shyampur': [1 if area == 'Shyampur' else 0],
-        'Area_Sutrapur': [1 if area == 'Sutrapur' else 0],
-        'Area_Tejgaon': [1 if area == 'Tejgaon' else 0],
-        'AreaType_Developed': [0],  # Default value
-        'AreaType_Undeveloped': [1],  # Default value
-        'District_Dhaka': [1 if district == 'Dhaka' else 0],
-        'HouseType_Building': [1],  # Default value
-        'HouseType_Other': [0],  # Default value
-        'HouseType_Tinshed': [0]  # Default value
+        'IgM': [igm]
     }
+    
+    # Add area features (one-hot encoded)
+    for area_name in all_areas:
+        feature_data[f'Area_{area_name}'] = [1 if area == area_name else 0]
+    
+    # Add other categorical features
+    feature_data['AreaType_Developed'] = [0]  # Default value
+    feature_data['AreaType_Undeveloped'] = [1]  # Default value
+    feature_data['District_Dhaka'] = [1 if district == 'Dhaka' else 0]
+    feature_data['HouseType_Building'] = [1]  # Default value
+    feature_data['HouseType_Other'] = [0]  # Default value
+    feature_data['HouseType_Tinshed'] = [0]  # Default value
     
     # Create DataFrame
     feature_df = pd.DataFrame(feature_data)
@@ -136,11 +214,21 @@ def predict_dengue_risk_tool(age, gender, ns1, igg, igm, area, district):
     
     risk_level = "High" if probability >= 0.7 else "Medium" if probability >= 0.4 else "Low"
     
+    # Get location-based context for Gemini
+    location_context = create_location_context(area, district)
+    
+    # Return data for Gemini to analyze and generate response
     return {
         "probability": round(probability, 3),
         "risk_level": risk_level,
+        "age": age,
+        "gender": "Male" if gender == 1 else "Female",
+        "ns1": "Positive" if ns1 == 1 else "Negative",
+        "igg": "Positive" if igg == 1 else "Negative",
+        "igm": "Positive" if igm == 1 else "Negative",
         "area": area,
-        "district": district
+        "district": district,
+        "location_context": location_context
     }
 
 def process_tool_call(tool_name, tool_input):
@@ -170,6 +258,24 @@ def process_tool_call(tool_name, tool_input):
             tool_input["district"],
             tool_input["area"]
         )
+        
+        # Enhance statistics with future risk predictions
+        if stats:
+            # Simple prediction based on current statistics
+            avg_risk = stats.get("avg_risk_score", 0)
+            if avg_risk >= 0.7:
+                future_risk = "High risk expected to continue for the next 2-4 months. Enhanced prevention measures strongly recommended."
+            elif avg_risk >= 0.4:
+                future_risk = "Moderate risk likely to persist over the next 2-4 months. Maintain preventive practices."
+            else:
+                future_risk = "Low risk expected to continue for the next 2-4 months. Continue routine monitoring."
+            
+            stats["future_risk_prediction"] = future_risk
+            
+            # Add location context for Gemini to analyze
+            location_context = create_location_context(tool_input["area"], tool_input["district"])
+            stats["location_context"] = location_context
+        
         return stats or {"error": "No historical data found for this area"}
 
 def chat_with_dengue_agent(user_message, conversation_history=None):
@@ -185,7 +291,7 @@ def chat_with_dengue_agent(user_message, conversation_history=None):
         "content": user_message
     })
     
-    # System prompt
+    # Simplified system prompt that lets Gemini generate responses based on data
     system_prompt = """You are a Dengue Intelligence Assistant helping health officials and medical staff 
     assess dengue risk and make data-driven decisions.
 
@@ -193,13 +299,21 @@ def chat_with_dengue_agent(user_message, conversation_history=None):
     1. A machine learning model that predicts dengue risk based on patient data
     2. A historical database of similar cases
     3. Area-level statistics and trends
+    4. Location-based statistical summaries
 
-    When answering:
-    - Be clear and actionable
-    - Cite risk scores and statistics
-    - Provide specific recommendations
-    - Explain your reasoning
-    - Use the tools to gather data before responding
+    Your task is to:
+    - Analyze the provided dengue risk prediction data
+    - Interpret the meaning of the risk score in context
+    - Provide personalized recommendations based on the individual's profile
+    - Use the location context to give area-specific advice
+    - Explain what the test results mean for this person
+    - Suggest appropriate actions based on the risk level
+    - Recommend when to seek medical attention
+    - Provide lifestyle, dietary, and prevention guidance
+    - Offer insights about future risk patterns if relevant
+    
+    Always be clear, actionable, and evidence-based in your responses.
+    Focus on helping the user understand their situation and what they should do.
     """
     
     full_prompt = system_prompt + "\nUser query: " + user_message
