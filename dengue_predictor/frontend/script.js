@@ -85,14 +85,14 @@ predictionForm.addEventListener('submit', async function(e) {
         IgG: formData.get('igg') ? 1 : 0,
         IgM: formData.get('igm') ? 1 : 0,
         Area: formData.get('area'),
-        AreaType: "Urban", // Default value
-        HouseType: "Building", // Default value
+        AreaType: formData.get('area-type'),
+        HouseType: formData.get('house-type'),
         District: formData.get('district')
     };
     
     // Validate required fields
-    if (!data.District || !data.Area) {
-        alert('Please select both District and Area');
+    if (!data.District || !data.Area || !data.AreaType || !data.HouseType) {
+        alert('Please fill in all required fields');
         return;
     }
     
@@ -108,6 +108,8 @@ predictionForm.addEventListener('submit', async function(e) {
     `;
     
     try {
+        console.log('Sending prediction request with data:', data);
+        
         // Call the frontend server which will forward to backend API
         const response = await fetch('/predict', {
             method: 'POST',
@@ -117,15 +119,21 @@ predictionForm.addEventListener('submit', async function(e) {
             body: JSON.stringify(data)
         });
         
+        console.log('Received response from server:', response);
+        
         if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Server error response:', errorText);
+            
             if (response.status === 503) {
                 throw new Error('Backend service unavailable. Please start the backend API server on port 8001.');
             } else {
-                throw new Error(`Failed to get prediction: ${response.status} ${response.statusText}`);
+                throw new Error(`Failed to get prediction: ${response.status} ${response.statusText} - ${errorText}`);
             }
         }
         
         const result = await response.json();
+        console.log('Prediction result:', result);
         
         // Display results
         displayResults(result);
@@ -134,6 +142,7 @@ predictionForm.addEventListener('submit', async function(e) {
         addBotMessage(`I've analyzed the patient data. The dengue risk is ${Math.round(result.probability * 100)}% (${result.risk_level} risk). Would you like me to explain what this means or provide recommendations?`);
         
     } catch (error) {
+        console.error('Error during prediction:', error);
         resultsContainer.innerHTML = `
             <div class="error">
                 <i class="fas fa-exclamation-triangle"></i>
@@ -265,4 +274,5 @@ function generateAIResponse(message) {
 // Initialize with a welcome message
 document.addEventListener('DOMContentLoaded', function() {
     addBotMessage("Hello! I'm your Dengue Intelligence Assistant. Enter patient information in the form to get started with risk assessment, or ask me anything about dengue prevention and treatment.");
+    console.log('Dengue Risk Predictor frontend initialized');
 });

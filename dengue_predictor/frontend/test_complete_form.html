@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complete Form Test</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="logo">
+                <i class="fas fa-virus"></i>
+                <h1>Complete Form Test</h1>
+            </div>
+        </header>
+
+        <div class="main-content">
+            <div class="card">
+                <h2><i class="fas fa-user-md"></i> Patient Information</h2>
+                <form id="test-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="age">Age</label>
+                            <input type="number" id="age" name="age" min="0" max="120" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="gender">Gender</label>
+                            <select id="gender" name="gender" required>
+                                <option value="">Select Gender</option>
+                                <option value="0">Female</option>
+                                <option value="1">Male</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Test Results</label>
+                        <div class="checkbox-group">
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="ns1" name="ns1" value="1">
+                                <label for="ns1">NS1 Positive</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="igg" name="igg" value="1">
+                                <label for="igg">IgG Positive</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="igm" name="igm" value="1">
+                                <label for="igm">IgM Positive</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="district">District</label>
+                            <select id="district" name="district" required>
+                                <option value="">Select District</option>
+                                <option value="Dhaka">Dhaka</option>
+                                <option value="Chittagong">Chittagong</option>
+                                <option value="Khulna">Khulna</option>
+                                <option value="Rajshahi">Rajshahi</option>
+                                <option value="Barisal">Barisal</option>
+                                <option value="Sylhet">Sylhet</option>
+                                <option value="Rangpur">Rangpur</option>
+                                <option value="Mymensingh">Mymensingh</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="area">Area</label>
+                            <select id="area" name="area" required>
+                                <option value="">Select Area First</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="area-type">Area Type</label>
+                            <select id="area-type" name="area-type" required>
+                                <option value="">Select Area Type</option>
+                                <option value="Urban">Urban</option>
+                                <option value="Rural">Rural</option>
+                                <option value="Undeveloped">Undeveloped</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="house-type">House Type</label>
+                            <select id="house-type" name="house-type" required>
+                                <option value="">Select House Type</option>
+                                <option value="Building">Building</option>
+                                <option value="Tinshed">Tinshed</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-submit">
+                        <i class="fas fa-check"></i> Test Form
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Area data by district
+        const areasByDistrict = {
+            "Dhaka": [
+                "Adabor", "Badda", "Banasree", "Bangshal", "Biman Bandar", "Bosila", "Cantonment",
+                "Chawkbazar", "Demra", "Dhanmondi", "Gendaria", "Gulshan", "Hazaribagh",
+                "Jatrabari", "Kadamtali", "Kafrul", "Kalabagan", "Kamrangirchar", "Keraniganj",
+                "Khilgaon", "Khilkhet", "Lalbagh", "Mirpur", "Mohammadpur", "Motijheel",
+                "New Market", "Pallabi", "Paltan", "Ramna", "Rampura", "Sabujbagh",
+                "Shahbagh", "Sher-e-Bangla Nagar", "Shyampur", "Sutrapur", "Tejgaon"
+            ],
+            "Chittagong": [
+                "Agrabad", "Bakolia", "Bayezid Bostami", "Chandgaon", "Chawkbazar", 
+                "Double Mooring", "EPZ", "Firozpur", "Golamari", "Halishahar",
+                "Jalalabad", "Jubilee Road", "Karnaphuli", "Khulshi", "Lal Khan Bazar",
+                "Lalkhan Bazar", "Madarbari", "Muradpur", "Nasirabad", "New Market",
+                "Oxygen", "Pahartali", "Panchlaish", "Patenga", "Rampura TSO",
+                "Raozan", "Sholoshahar", "Sikder Medical", "Sitakunda"
+            ],
+            "Khulna": [
+                "Alamdanga", "Bagherpara", "Chalna", "Dacope", "Digholia", "Dumuria",
+                "Harintana", "Khalishpur", "Khanjahanpur", "Khulna Sadar", "Labanchora",
+                "Madaripur", "Paikgacha", "Phultala", "Rupsha", "Sonadanga", "Terokhada"
+            ],
+            "Rajshahi": [
+                "Bagha", "Bagmara", "Charghat", "Durgapur", "Godagari", "Mohanpur",
+                "Paba", "Putia", "Rajshahi Sadar", "Shah Mokdum", "Tanore"
+            ],
+            "Barisal": [
+                "Agailjhara", "Babuganj", "Bakerganj", "Banaripara", "Barisal Sadar",
+                "Gournadi", "Hizla", "Mehendiganj", "Muladi", "Wazirpur"
+            ],
+            "Sylhet": [
+                "Balaganj", "Beanibazar", "Bishwanath", "Companiganj", "Dakshin Surma",
+                "Fenchuganj", "Golapganj", "Gowainghat", "Jaintiapur", "Kanaighat",
+                "Osmani Nagar", "Sylhet Sadar", "Zakiganj"
+            ],
+            "Rangpur": [
+                "Badarganj", "Gangachara", "Kaunia", "Mithapukur", "Pirgacha",
+                "Pirganj", "Rangpur Sadar", "Taraganj"
+            ],
+            "Mymensingh": [
+                "Bhaluka", "Dhobaura", "Fulbaria", "Gaffargaon", "Gauripur",
+                "Haluaghat", "Ishwarganj", "Muktagacha", "Mymensingh Sadar",
+                "Nandail", "Phulpur", "Trishal"
+            ]
+        };
+
+        // DOM Elements
+        const districtSelect = document.getElementById('district');
+        const areaSelect = document.getElementById('area');
+        const testForm = document.getElementById('test-form');
+
+        // Initialize area options based on district selection
+        districtSelect.addEventListener('change', function() {
+            const selectedDistrict = this.value;
+            areaSelect.innerHTML = '<option value="">Select Area</option>';
+            
+            if (selectedDistrict && areasByDistrict[selectedDistrict]) {
+                areasByDistrict[selectedDistrict].forEach(area => {
+                    const option = document.createElement('option');
+                    option.value = area;
+                    option.textContent = area;
+                    areaSelect.appendChild(option);
+                });
+                areaSelect.disabled = false;
+            } else {
+                areaSelect.disabled = true;
+            }
+        });
+
+        // Form submission handler
+        testForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Get form data
+            const formData = new FormData(testForm);
+            const data = {
+                Age: parseInt(formData.get('age')),
+                Gender: parseInt(formData.get('gender')),
+                NS1: formData.get('ns1') ? 1 : 0,
+                IgG: formData.get('igg') ? 1 : 0,
+                IgM: formData.get('igm') ? 1 : 0,
+                Area: formData.get('area'),
+                AreaType: formData.get('area-type'),
+                HouseType: formData.get('house-type'),
+                District: formData.get('district')
+            };
+            
+            // Display all data
+            let message = "Form Data:\n";
+            for (const [key, value] of Object.entries(data)) {
+                message += `${key}: ${value}\n`;
+            }
+            
+            alert(message);
+        });
+    </script>
+</body>
+</html>
