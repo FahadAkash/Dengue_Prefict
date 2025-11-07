@@ -151,6 +151,9 @@ predictionForm.addEventListener('submit', async function(e) {
             area: data.Area,
             district: data.District
         };
+
+        // Reset conversation history for the new assessment
+        conversationHistory = [];
         
         // Display results with minimal information, let AI agent provide detailed recommendations
         displayResults(result);
@@ -197,7 +200,8 @@ async function requestDetailedRecommendations() {
         const chatPayload = {
             message: "Please provide detailed recommendations for this dengue risk assessment including diet, lifestyle, prevention measures, and when to seek medical help.",
             conversation_history: conversationHistory,
-            risk_assessment: currentRiskAssessment
+            risk_assessment: currentRiskAssessment,
+            include_full_recommendations: true
         };
         
         const response = await fetch('/chat', {
@@ -216,7 +220,7 @@ async function requestDetailedRecommendations() {
         }
         
         const data = await response.json();
-        conversationHistory = data.conversation_history;
+        conversationHistory = data.conversation_history || [];
         
         // Add bot response to chat
         addBotMessage(data.response);
@@ -265,10 +269,9 @@ async function sendMessage() {
             // Send message to backend chat endpoint with risk assessment context
             const chatPayload = {
                 message: message,
-                conversation_history: conversationHistory
+                conversation_history: conversationHistory,
             };
             
-            // Include risk assessment data if available
             if (currentRiskAssessment) {
                 chatPayload.risk_assessment = currentRiskAssessment;
             }
@@ -289,7 +292,7 @@ async function sendMessage() {
             }
             
             const data = await response.json();
-            conversationHistory = data.conversation_history;
+            conversationHistory = data.conversation_history || [];
             
             // Add bot response to chat
             addBotMessage(data.response);

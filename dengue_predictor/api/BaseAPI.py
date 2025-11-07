@@ -53,6 +53,7 @@ class ChatMessage(BaseModel):
     message: str
     conversation_history: List[Dict] = []
     risk_assessment: Optional[Dict] = None
+    include_full_recommendations: bool = False
 
 def get_risk_level(prob: float) -> str:
     if prob >= 0.7:
@@ -242,9 +243,28 @@ async def chat_with_agent(chat_data: ChatMessage):
     """Chat endpoint that connects to the Gemini AI agent with risk assessment context"""
     try:
         # If risk assessment data is provided, include it in the message context
+        history = chat_data.conversation_history or []
+        normalized_history = []
+        for message in history:
+            if isinstance(message, dict) and 'role' in message and 'content' in message:
+                normalized_history.append({
+                    "role": message['role'],
+                    "content": message['content']
+                })
+
         enhanced_message = chat_data.message
         if chat_data.risk_assessment:
-            enhanced_message = f"""
+            context_summary = f"""
+Risk Level: {chat_data.risk_assessment.get('risk_level', 'Unknown')}
+Probability: {chat_data.risk_assessment.get('probability', 'Unknown')}%
+Patient: {chat_data.risk_assessment.get('age', 'Unknown')} years old, {chat_data.risk_assessment.get('gender', 'Unknown')}
+Lab Results: NS1 {chat_data.risk_assessment.get('ns1', 'Unknown')}, IgG {chat_data.risk_assessment.get('igg', 'Unknown')}, IgM {chat_data.risk_assessment.get('igm', 'Unknown')}
+Location: {chat_data.risk_assessment.get('area', 'Unknown')}, {chat_data.risk_assessment.get('district', 'Unknown')}
+"""
+
+            include_full = chat_data.include_full_recommendations or len(normalized_history) == 0
+            if include_full:
+                enhanced_message = f"""
 Risk Assessment Context:
 - Risk Level: {chat_data.risk_assessment.get('risk_level', 'Unknown')}
 - Probability: {chat_data.risk_assessment.get('probability', 'Unknown')}%
@@ -257,10 +277,19 @@ User Question: {chat_data.message}
 
 Please provide detailed, personalized advice based on this risk assessment context.
 """
+            else:
+                enhanced_message = f"""
+Patient Context:
+{context_summary}
+
+User Question: {chat_data.message}
+
+Please answer concisely while considering the patient's current risk assessment.
+"""
         
         response, updated_history = chat_with_dengue_agent(
-            enhanced_message, 
-            chat_data.conversation_history
+            enhanced_message,
+            normalized_history
         )
         return {
             "response": response,

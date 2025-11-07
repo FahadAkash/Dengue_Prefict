@@ -178,6 +178,9 @@ def chat_with_dengue_agent(user_message, conversation_history=None):
     5. Prevention Measures
     6. Medical Guidance
     7. Local Resources (if requested)
+    
+    For simple questions like "should I drink coconut water?", provide a direct, concise answer
+    while still considering the context if available.
     """
     
     full_prompt = system_prompt + "\nUser query: " + user_message
@@ -186,7 +189,9 @@ def chat_with_dengue_agent(user_message, conversation_history=None):
     try:
         response = llm.generate_content(full_prompt)
         final_response = response.text
+        print(f"Gemini response: {final_response}")  # Debug logging
     except Exception as e:
+        print(f"Gemini API error: {str(e)}")  # Debug logging
         final_response = f"Error generating response: {str(e)}"
     
     # Add to history
