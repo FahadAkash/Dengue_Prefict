@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dengue Risk Predictor</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <i class="fas fa-virus"></i>
+                <h1>Dengue Risk Predictor</h1>
+            </div>
+            <p class="subtitle">Advanced AI-powered dengue risk assessment and prevention guidance</p>
+        </header>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Patient Information Form -->
+            <section class="patient-info">
+                <div class="card">
+                    <h2><i class="fas fa-user-md"></i> Patient Information</h2>
+                    <form id="prediction-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="age">Age</label>
+                                <input type="number" id="age" name="age" min="0" max="120" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="gender">Gender</label>
+                                <select id="gender" name="gender" required>
+                                    <option value="">Select Gender</option>
+                                    <option value="0">Female</option>
+                                    <option value="1">Male</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Test Results</label>
+                            <div class="checkbox-group">
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="ns1" name="ns1" value="1">
+                                    <label for="ns1">NS1 Positive</label>
+                                </div>
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="igg" name="igg" value="1">
+                                    <label for="igg">IgG Positive</label>
+                                </div>
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="igm" name="igm" value="1">
+                                    <label for="igm">IgM Positive</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="district">District</label>
+                                <select id="district" name="district" required>
+                                    <option value="">Select District</option>
+                                    <option value="Dhaka">Dhaka</option>
+                                    <option value="Chittagong">Chittagong</option>
+                                    <option value="Khulna">Khulna</option>
+                                    <option value="Rajshahi">Rajshahi</option>
+                                    <option value="Barisal">Barisal</option>
+                                    <option value="Sylhet">Sylhet</option>
+                                    <option value="Rangpur">Rangpur</option>
+                                    <option value="Mymensingh">Mymensingh</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="area">Area</label>
+                                <select id="area" name="area" required>
+                                    <option value="">Select Area First</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn-submit">
+                            <i class="fas fa-calculator"></i> Calculate Risk
+                        </button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- Risk Assessment Results -->
+            <section class="results-section">
+                <div class="card">
+                    <h2><i class="fas fa-chart-line"></i> Risk Assessment</h2>
+                    <div id="results-container">
+                        <div class="placeholder">
+                            <i class="fas fa-heartbeat"></i>
+                            <p>Enter patient information and click "Calculate Risk" to get started</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- AI Assistant -->
+        <section class="ai-assistant">
+            <div class="card">
+                <h2><i class="fas fa-robot"></i> AI Assistant</h2>
+                <div class="chat-container">
+                    <div class="chat-messages" id="chat-messages">
+                        <!-- Messages will be added here dynamically -->
+                    </div>
+                    <div class="chat-input">
+                        <input type="text" id="user-input" placeholder="Ask about dengue prevention, test results, or risk factors...">
+                        <button id="send-btn"><i class="fas fa-paper-plane"></i></button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>Dengue Risk Predictor &copy; 2025 | AI-powered healthcare solution</p>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
