@@ -101,6 +101,51 @@ class DengueRequestHandler(BaseHTTPRequestHandler):
                 self.end_headers()
                 error_response = {'error': str(e)}
                 self.wfile.write(json.dumps(error_response).encode('utf-8'))
+                
+        elif self.path == '/chat':
+            # Handle chat request by forwarding to backend API on port 8001
+            content_length = int(self.headers['Content-Length'])
+            post_data = self.rfile.read(content_length)
+            
+            try:
+                # Forward request to backend API chat endpoint
+                backend_url = 'http://localhost:8001/chat'
+                req = urllib.request.Request(
+                    backend_url,
+                    data=post_data,
+                    headers={'Content-Type': 'application/json'}
+                )
+                
+                with urllib.request.urlopen(req) as response:
+                    backend_response = response.read()
+                    status_code = response.getcode()
+                
+                # Send response back to frontend
+                self.send_response(status_code)
+                self.send_header('Content-type', 'application/json')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.end_headers()
+                self.wfile.write(backend_response)
+                
+            except urllib.error.URLError as e:
+                # Backend not available, return error
+                self.send_response(503)
+                self.send_header('Content-type', 'application/json')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.end_headers()
+                error_response = {
+                    'error': 'Backend service unavailable',
+                    'message': 'The chat service is not running. Please start the backend API server on port 8001.'
+                }
+                self.wfile.write(json.dumps(error_response).encode('utf-8'))
+            except Exception as e:
+                # Other error
+                self.send_response(500)
+                self.send_header('Content-type', 'application/json')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.end_headers()
+                error_response = {'error': str(e)}
+                self.wfile.write(json.dumps(error_response).encode('utf-8'))
         else:
             # For other POST requests, send 404
             self.send_response(404)

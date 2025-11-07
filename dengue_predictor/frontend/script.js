@@ -7,6 +7,10 @@ const sendBtn = document.getElementById('send-btn');
 const districtSelect = document.getElementById('district');
 const areaSelect = document.getElementById('area');
 
+// Conversation history for chat
+let conversationHistory = [];
+let currentRiskAssessment = null;
+
 // Area data by district (simplified for common areas)
 const areasByDistrict = {
     "Dhaka": [
@@ -135,11 +139,24 @@ predictionForm.addEventListener('submit', async function(e) {
         const result = await response.json();
         console.log('Prediction result:', result);
         
+        // Store current risk assessment for chat context
+        currentRiskAssessment = {
+            probability: result.probability,
+            risk_level: result.risk_level,
+            age: data.Age,
+            gender: data.Gender === 1 ? "Male" : "Female",
+            ns1: data.NS1 === 1 ? "Positive" : "Negative",
+            igg: data.IgG === 1 ? "Positive" : "Negative",
+            igm: data.IgM === 1 ? "Positive" : "Negative",
+            area: data.Area,
+            district: data.District
+        };
+        
         // Display results
         displayResults(result);
         
-        // Add result to chat
-        addBotMessage(`I've analyzed the patient data. The dengue risk is ${Math.round(result.probability * 100)}% (${result.risk_level} risk). Would you like me to explain what this means or provide recommendations?`);
+        // Add result to chat with context-aware message
+        addBotMessage(`I've analyzed the patient data. The dengue risk is ${Math.round(result.probability * 100)}% (${result.risk_level} risk). I can provide detailed recommendations based on this assessment. What would you like to know?`);
         
     } catch (error) {
         console.error('Error during prediction:', error);
@@ -160,7 +177,7 @@ userInput.addEventListener('keypress', function(e) {
     }
 });
 
-function sendMessage() {
+async function sendMessage() {
     const message = userInput.value.trim();
     if (message) {
         // Add user message to chat
@@ -169,11 +186,60 @@ function sendMessage() {
         // Clear input
         userInput.value = '';
         
-        // Simulate AI response
-        setTimeout(() => {
-            const response = generateAIResponse(message);
-            addBotMessage(response);
-        }, 1000);
+        // Show typing indicator
+        const typingIndicator = document.createElement('div');
+        typingIndicator.className = 'message bot-message typing-indicator';
+        typingIndicator.innerHTML = `
+            <div class="avatar">
+                <i class="fas fa-robot"></i>
+            </div>
+            <div class="message-content">
+                <p><i class="fas fa-circle"></i><i class="fas fa-circle"></i><i class="fas fa-circle"></i></p>
+            </div>
+        `;
+        chatMessages.appendChild(typingIndicator);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+        
+        try {
+            // Send message to backend chat endpoint with risk assessment context
+            const chatPayload = {
+                message: message,
+                conversation_history: conversationHistory
+            };
+            
+            // Include risk assessment data if available
+            if (currentRiskAssessment) {
+                chatPayload.risk_assessment = currentRiskAssessment;
+            }
+            
+            const response = await fetch('/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(chatPayload)
+            });
+            
+            // Remove typing indicator
+            typingIndicator.remove();
+            
+            if (!response.ok) {
+                throw new Error(`Chat error: ${response.status} ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+            conversationHistory = data.conversation_history;
+            
+            // Add bot response to chat
+            addBotMessage(data.response);
+            
+        } catch (error) {
+            // Remove typing indicator
+            typingIndicator.remove();
+            
+            console.error('Chat error:', error);
+            addBotMessage("Sorry, I encountered an error while processing your request. Please try again.");
+        }
     }
 }
 
@@ -250,25 +316,6 @@ function displayResults(result) {
             ` : ''}
         </div>
     `;
-}
-
-// AI Response Generator (simulated)
-function generateAIResponse(message) {
-    const lowerMessage = message.toLowerCase();
-    
-    if (lowerMessage.includes('hello') || lowerMessage.includes('hi')) {
-        return "Hello! I'm your Dengue Intelligence Assistant. How can I help you today?";
-    } else if (lowerMessage.includes('risk') || lowerMessage.includes('dengue')) {
-        return "Dengue risk is calculated based on patient factors (age, gender, test results) and location data. The system analyzes patterns from historical cases to provide personalized risk assessment.";
-    } else if (lowerMessage.includes('test') || lowerMessage.includes('ns1') || lowerMessage.includes('igg') || lowerMessage.includes('igm')) {
-        return "The test results help determine the stage and nature of potential dengue infection. NS1 indicates acute infection, while IgG and IgM indicate immune response. The combination helps assess risk level.";
-    } else if (lowerMessage.includes('prevention') || lowerMessage.includes('prevent')) {
-        return "Key prevention measures include eliminating standing water, using mosquito repellent, wearing protective clothing, and maintaining clean surroundings. Location-specific factors like area type and housing also influence risk.";
-    } else if (lowerMessage.includes('thank')) {
-        return "You're welcome! Feel free to ask if you have more questions about dengue risk assessment.";
-    } else {
-        return "I'm here to help with dengue risk assessment and prevention advice. You can ask about risk factors, test results interpretation, prevention measures, or location-specific recommendations.";
-    }
 }
 
 // Initialize with a welcome message

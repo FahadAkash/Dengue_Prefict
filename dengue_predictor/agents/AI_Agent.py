@@ -291,7 +291,7 @@ def chat_with_dengue_agent(user_message, conversation_history=None):
         "content": user_message
     })
     
-    # Simplified system prompt that lets Gemini generate responses based on data
+    # Enhanced system prompt that lets Gemini generate responses based on data
     system_prompt = """You are a Dengue Intelligence Assistant helping health officials and medical staff 
     assess dengue risk and make data-driven decisions.
 
@@ -311,9 +311,15 @@ def chat_with_dengue_agent(user_message, conversation_history=None):
     - Recommend when to seek medical attention
     - Provide lifestyle, dietary, and prevention guidance
     - Offer insights about future risk patterns if relevant
+    - Suggest nearby healthcare facilities and government resources
+    - Recommend specific foods and dietary supplements
+    - Provide information about local market availability for prevention items
     
     Always be clear, actionable, and evidence-based in your responses.
     Focus on helping the user understand their situation and what they should do.
+    
+    When risk assessment context is provided, use it to give highly personalized advice.
+    Include specific recommendations based on the risk level, patient demographics, and location.
     """
     
     full_prompt = system_prompt + "\nUser query: " + user_message

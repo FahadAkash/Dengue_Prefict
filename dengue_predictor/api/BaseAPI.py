@@ -3,12 +3,13 @@ from pydantic import BaseModel
 import joblib
 import numpy as np
 import pandas as pd
-from typing import Dict
+from typing import Dict, List, Optional
 import sys
 import os
 
 # Add the parent directory to the path to import from db
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'db'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'agents'))
 
 # Import from PineconeDB
 try:
@@ -16,6 +17,13 @@ try:
 except ImportError:
     # If direct import fails, try with full path
     from ..db.PineconeDB import add_case_to_vector_db
+
+# Import from AI_Agent
+try:
+    from AI_Agent import chat_with_dengue_agent
+except ImportError:
+    # If direct import fails, try with full path
+    from ..agents.AI_Agent import chat_with_dengue_agent
 
 app = FastAPI(title="Dengue Risk Prediction API")
 
@@ -40,6 +48,11 @@ class PredictionResponse(BaseModel):
     confidence: str
     recommendation: str
     key_factors: Dict[str, str]
+
+class ChatMessage(BaseModel):
+    message: str
+    conversation_history: List[Dict] = []
+    risk_assessment: Optional[Dict] = None
 
 def get_risk_level(prob: float) -> str:
     if prob >= 0.7:
@@ -210,14 +223,49 @@ async def predict_dengue(data: PatientData):
             # Log the error but don't fail the prediction
             print(f"Warning: Could not store case in vector DB: {e}")
         
+        # Return minimal recommendation - AI agent will provide detailed recommendations
+        recommendation = f"Risk Level: {risk_level} ({prob*100:.1f}% probability). For detailed recommendations, please consult with the AI assistant."
+        
         return PredictionResponse(
             probability=round(prob, 3),
             risk_level=risk_level,
             confidence="High" if abs(prob - 0.5) > 0.3 else "Medium",
-            recommendation=get_recommendation(prob, data.Area),
+            recommendation=recommendation,
             key_factors=key_factors
         )
         
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/chat")
+async def chat_with_agent(chat_data: ChatMessage):
+    """Chat endpoint that connects to the Gemini AI agent with risk assessment context"""
+    try:
+        # If risk assessment data is provided, include it in the message context
+        enhanced_message = chat_data.message
+        if chat_data.risk_assessment:
+            enhanced_message = f"""
+Risk Assessment Context:
+- Risk Level: {chat_data.risk_assessment.get('risk_level', 'Unknown')}
+- Probability: {chat_data.risk_assessment.get('probability', 'Unknown')}%
+- Patient Age: {chat_data.risk_assessment.get('age', 'Unknown')}
+- Patient Gender: {chat_data.risk_assessment.get('gender', 'Unknown')}
+- Test Results: NS1 {chat_data.risk_assessment.get('ns1', 'Unknown')}, IgG {chat_data.risk_assessment.get('igg', 'Unknown')}, IgM {chat_data.risk_assessment.get('igm', 'Unknown')}
+- Location: {chat_data.risk_assessment.get('area', 'Unknown')}, {chat_data.risk_assessment.get('district', 'Unknown')}
+
+User Question: {chat_data.message}
+
+Please provide detailed, personalized advice based on this risk assessment context.
+"""
+        
+        response, updated_history = chat_with_dengue_agent(
+            enhanced_message, 
+            chat_data.conversation_history
+        )
+        return {
+            "response": response,
+            "conversation_history": updated_history
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
