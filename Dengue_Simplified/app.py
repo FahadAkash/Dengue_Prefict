@@ -10,8 +10,23 @@ import numpy as np
 import pandas as pd
 import google.generativeai as genai
 import os
+import sys
+import webbrowser
+import threading
+import time
 from dotenv import load_dotenv
 import traceback
+
+# Helper function to get resource paths (works in both dev and exe mode)
+def get_resource_path(relative_path):
+    """Get absolute path to resource, works for dev and for PyInstaller"""
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    
+    return os.path.join(base_path, relative_path)
 
 # Load environment variables
 load_dotenv()
@@ -27,12 +42,14 @@ if not GOOGLE_API_KEY:
     print("   The chat feature will not work without it.")
 else:
     genai.configure(api_key=GOOGLE_API_KEY)
-    gemini_model = genai.GenerativeModel('models/gemini-2.0-flash-exp')
+    # Use Gemini 2.0 Flash for free tier access
+    gemini_model = genai.GenerativeModel('gemini-2.0-flash')
     print("✅ Google Gemini AI initialized")
 
 # Load ML model
 try:
-    model = joblib.load('logistic_regression_model.joblib')
+    model_path = get_resource_path('logistic_regression_model.joblib')
+    model = joblib.load(model_path)
     print("✅ ML model loaded successfully")
 except Exception as e:
     print(f"❌ Error loading model: {e}")
@@ -168,7 +185,14 @@ def preprocess_input(data):
 @app.route('/')
 def index():
     """Serve the frontend HTML"""
-    return send_from_directory('.', 'index.html')
+    try:
+        # Get the directory where index.html is located
+        html_dir = os.path.dirname(get_resource_path('index.html'))
+        return send_from_directory(html_dir, 'index.html')
+    except Exception as e:
+        print(f"Error serving index.html: {e}")
+        # Fallback to current directory
+        return send_from_directory('.', 'index.html')
 
 
 @app.route('/predict', methods=['POST'])
@@ -311,6 +335,16 @@ def health():
     })
 
 
+def open_browser():
+    """Open browser after a short delay to allow server to start"""
+    time.sleep(2)
+    try:
+        webbrowser.open('http://localhost:5000')
+        print("\n🌐 Browser opened at http://localhost:5000")
+    except Exception as e:
+        print(f"\n⚠️  Could not open browser automatically: {e}")
+        print("   Please manually navigate to http://localhost:5000")
+
 if __name__ == '__main__':
     print("\n" + "="*60)
     print("🦟 Dengue Risk Prediction System - Simplified Version")
@@ -324,4 +358,13 @@ if __name__ == '__main__':
     print("\n💡 Press Ctrl+C to stop the server")
     print("="*60 + "\n")
     
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    # Open browser in background thread
+    browser_thread = threading.Thread(target=open_browser)
+    browser_thread.daemon = True
+    browser_thread.start()
+    
+    # Determine if running as executable or in development
+    is_exe = getattr(sys, 'frozen', False)
+    debug_mode = not is_exe  # Enable debug only in development
+    
+    app.run(host='0.0.0.0', port=5000, debug=debug_mode, use_reloader=False)
