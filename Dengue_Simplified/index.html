@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dengue Risk Predictor - Simplified</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            animation: fadeInDown 0.6s ease;
+        }
+
+        .header .logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+
+        .header .logo i {
+            font-size: 48px;
+        }
+
+        .header h1 {
+            font-size: 42px;
+            font-weight: 700;
+        }
+
+        .subtitle {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            animation: fadeInUp 0.6s ease;
+        }
+
+        .card h2 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card h2 i {
+            color: #667eea;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 14px;
+            font-family: 'Poppins', sans-serif;
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .checkbox-group {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .checkbox-item label {
+            cursor: pointer;
+            margin: 0;
+            font-size: 14px;
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .btn-submit:hover {
+            transform: translateY(-2px);
+        }
+
+        .placeholder {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .placeholder i {
+            font-size: 64px;
+            margin-bottom: 20px;
+            color: #ddd;
+        }
+
+        .risk-result {
+            animation: fadeIn 0.6s ease;
+        }
+
+        .risk-badge {
+            display: inline-block;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+
+        .risk-badge.high {
+            background: #ffebee;
+            color: #f44336;
+        }
+
+        .risk-badge.medium {
+            background: #fff3e0;
+            color: #ff9800;
+        }
+
+        .risk-badge.low {
+            background: #e8f5e9;
+            color: #4caf50;
+        }
+
+        .risk-percentage {
+            font-size: 48px;
+            font-weight: 700;
+            margin: 15px 0;
+        }
+
+        .risk-description {
+            color: #666;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+
+        .risk-chart-container {
+            max-width: 250px;
+            margin: 30px auto;
+        }
+
+        .recommendations {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        .recommendations h3 {
+            font-size: 18px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .key-factors {
+            margin-top: 20px;
+        }
+
+        .key-factors h3 {
+            font-size: 18px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .key-factors ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .key-factors li {
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .ai-assistant {
+            animation: fadeInUp 0.8s ease;
+        }
+
+        .chat-container {
+            height: 400px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+
+        .message {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 15px;
+            animation: messageSlide 0.3s ease;
+        }
+
+        .message.user-message {
+            flex-direction: row-reverse;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .user-message .avatar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .bot-message .avatar {
+            background: #f0f0f0;
+            color: #667eea;
+        }
+
+        .message-content {
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            line-height: 1.5;
+        }
+
+        .user-message .message-content {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .bot-message .message-content {
+            background: white;
+            color: #333;
+        }
+
+        .chat-input {
+            display: flex;
+            gap: 10px;
+        }
+
+        .chat-input input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 25px;
+            font-size: 14px;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .chat-input input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .chat-input button {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .chat-input button:hover {
+            transform: scale(1.1);
+        }
+
+        .typing-indicator .message-content {
+            padding: 16px 20px;
+        }
+
+        .typing-indicator i {
+            animation: typing 1.4s infinite;
+            margin: 0 2px;
+        }
+
+        .typing-indicator i:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-indicator i:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .loading i {
+            font-size: 48px;
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .error {
+            text-align: center;
+            padding: 40px;
+            color: #f44336;
+        }
+
+        .error i {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+
+        .footer {
+            text-align: center;
+            color: white;
+            padding: 20px;
+            margin-top: 30px;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes messageSlide {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes typing {
+            0%, 60%, 100% {
+                opacity: 0.3;
+            }
+            30% {
+                opacity: 1;
+            }
+        }
+
+        @media (max-width: 968px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="logo">
+                <i class="fas fa-virus"></i>
+                <h1>Dengue Risk Predictor</h1>
+            </div>
+            <p class="subtitle">AI-powered dengue risk assessment with personalized health guidance</p>
+        </header>
+
+        <div class="main-content">
+            <!-- Patient Form -->
+            <section class="patient-info">
+                <div class="card">
+                    <h2><i class="fas fa-user-md"></i> Patient Information</h2>
+                    <form id="prediction-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="age">Age</label>
+                                <input type="number" id="age" name="age" min="0" max="120" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="gender">Gender</label>
+                                <select id="gender" name="gender" required>
+                                    <option value="">Select Gender</option>
+                                    <option value="0">Female</option>
+                                    <option value="1">Male</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Test Results</label>
+                            <div class="checkbox-group">
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="ns1" name="ns1" value="1">
+                                    <label for="ns1">NS1 Positive</label>
+                                </div>
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="igg" name="igg" value="1">
+                                    <label for="igg">IgG Positive</label>
+                                </div>
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="igm" name="igm" value="1">
+                                    <label for="igm">IgM Positive</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="district">District</label>
+                                <select id="district" name="district" required>
+                                    <option value="">Select District</option>
+                                    <option value="Dhaka">Dhaka</option>
+                                    <option value="Chittagong">Chittagong</option>
+                                    <option value="Khulna">Khulna</option>
+                                    <option value="Rajshahi">Rajshahi</option>
+                                    <option value="Barisal">Barisal</option>
+                                    <option value="Sylhet">Sylhet</option>
+                                    <option value="Rangpur">Rangpur</option>
+                                    <option value="Mymensingh">Mymensingh</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="area">Area</label>
+                                <select id="area" name="area" required disabled>
+                                    <option value="">Select District First</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="area-type">Area Type</label>
+                                <select id="area-type" name="area-type" required>
+                                    <option value="">Select Area Type</option>
+                                    <option value="Urban">Urban</option>
+                                    <option value="Rural">Rural</option>
+                                    <option value="Undeveloped">Undeveloped</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="house-type">House Type</label>
+                                <select id="house-type" name="house-type" required>
+                                    <option value="">Select House Type</option>
+                                    <option value="Building">Building</option>
+                                    <option value="Tinshed">Tinshed</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn-submit">
+                            <i class="fas fa-calculator"></i> Calculate Risk
+                        </button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- Results -->
+            <section class="results-section">
+                <div class="card">
+                    <h2><i class="fas fa-chart-line"></i> Risk Assessment</h2>
+                    <div id="results-container">
+                        <div class="placeholder">
+                            <i class="fas fa-heartbeat"></i>
+                            <p>Enter patient information and click "Calculate Risk" to get started</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- AI Chat -->
+        <section class="ai-assistant">
+            <div class="card">
+                <h2><i class="fas fa-robot"></i> AI Health Assistant</h2>
+                <div class="chat-container">
+                    <div class="chat-messages" id="chat-messages"></div>
+                    <div class="chat-input">
+                        <input type="text" id="user-input" placeholder="Ask about dengue prevention, symptoms, or risk factors...">
+                        <button id="send-btn"><i class="fas fa-paper-plane"></i></button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <footer class="footer">
+            <p>Dengue Risk Predictor © 2025 | Simplified AI-powered healthcare solution</p>
+        </footer>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
+    <script>
+        // Area mapping by district
+        const areasByDistrict = {
+            "Dhaka": ["Adabor", "Badda", "Banasree", "Bangshal", "Dhanmondi", "Gulshan", "Jatrabari", "Mirpur", "Mohammadpur", "Motijheel", "Uttara"],
+            "Chittagong": ["Agrabad", "Halishahar", "Khulshi", "Panchlaish", "Nasirabad"],
+            "Khulna": ["Khalishpur", "Sonadanga", "Daulatpur"],
+            "Rajshahi": ["Rajshahi Sadar", "Shah Mokdum", "Boalia"],
+            "Barisal": ["Barisal Sadar", "Babuganj"],
+            "Sylhet": ["Sylhet Sadar", "Jalalabad"],
+            "Rangpur": ["Rangpur Sadar"],
+            "Mymensingh": ["Mymensingh Sadar"]
+        };
+
+        // Global variables
+        let conversationHistory = [];
+        let currentRiskAssessment = null;
+        let riskChart = null;
+
+        // DOM elements
+        const predictionForm = document.getElementById('prediction-form');
+        const resultsContainer = document.getElementById('results-container');
+        const chatMessages = document.getElementById('chat-messages');
+        const userInput = document.getElementById('user-input');
+        const sendBtn = document.getElementById('send-btn');
+        const districtSelect = document.getElementById('district');
+        const areaSelect = document.getElementById('area');
+
+        // Populate areas based on district
+        districtSelect.addEventListener('change', function() {
+            const selectedDistrict = this.value;
+            areaSelect.innerHTML = '<option value="">Select Area</option>';
+            
+            if (selectedDistrict && areasByDistrict[selectedDistrict]) {
+                areasByDistrict[selectedDistrict].forEach(area => {
+                    const option = document.createElement('option');
+                    option.value = area;
+                    option.textContent = area;
+                    areaSelect.appendChild(option);
+                });
+                areaSelect.disabled = false;
+            } else {
+                areaSelect.disabled = true;
+            }
+        });
+
+        // Form submission
+        predictionForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(predictionForm);
+            const data = {
+                Age: parseInt(formData.get('age')),
+                Gender: parseInt(formData.get('gender')),
+                NS1: formData.get('ns1') ? 1 : 0,
+                IgG: formData.get('igg') ? 1 : 0,
+                IgM: formData.get('igm') ? 1 : 0,
+                Area: formData.get('area'),
+                District: formData.get('district'),
+                AreaType: formData.get('area-type'),
+                HouseType: formData.get('house-type')
+            };
+            
+            // Show loading
+            resultsContainer.innerHTML = `
+                <div class="loading">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>Analyzing risk factors...</p>
+                </div>
+            `;
+            
+            try {
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Prediction failed');
+                }
+                
+                const result = await response.json();
+                
+                // Store assessment
+                currentRiskAssessment = {
+                    probability: result.probability,
+                    risk_level: result.risk_level,
+                    age: data.Age,
+                    gender: data.Gender === 1 ? "Male" : "Female",
+                    ns1: data.NS1 === 1 ? "Positive" : "Negative",
+                    igg: data.IgG === 1 ? "Positive" : "Negative",
+                    igm: data.IgM === 1 ? "Positive" : "Negative",
+                    area: data.Area,
+                    district: data.District
+                };
+                
+                displayResults(result);
+                addBotMessage(`Risk assessment complete! The dengue risk is ${Math.round(result.probability * 100)}% (${result.risk_level} risk). Ask me anything about prevention, symptoms, or what to do next.`);
+                
+            } catch (error) {
+                resultsContainer.innerHTML = `
+                    <div class="error">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <p>Error: ${error.message}</p>
+                    </div>
+                `;
+            }
+        });
+
+        // Display results
+        function displayResults(result) {
+            const riskLevel = result.risk_level.toLowerCase();
+            const riskColor = getRiskColor(result.risk_level);
+            
+            resultsContainer.innerHTML = `
+                <div class="risk-result">
+                    <div class="risk-badge ${riskLevel}">${result.risk_level} RISK</div>
+                    <div class="risk-percentage" style="color: ${riskColor}">
+                        ${Math.round(result.probability * 100)}%
+                    </div>
+                    <div class="risk-description">
+                        <p>${result.recommendation}</p>
+                    </div>
+                    <div class="risk-chart-container">
+                        <canvas id="risk-chart"></canvas>
+                    </div>
+                    ${result.key_factors ? `
+                        <div class="key-factors">
+                            <h3><i class="fas fa-key"></i> Key Factors</h3>
+                            <ul>
+                                ${Object.entries(result.key_factors).map(([key, value]) => 
+                                    `<li><strong>${key.replace(/_/g, ' ')}:</strong> ${value}</li>`
+                                ).join('')}
+                            </ul>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+            
+            renderRiskChart(result.probability, result.risk_level);
+        }
+
+        // Get risk color
+        function getRiskColor(riskLevel) {
+            const colors = {
+                'HIGH': '#f44336',
+                'MEDIUM': '#ff9800',
+                'LOW': '#4caf50'
+            };
+            return colors[riskLevel] || '#2196f3';
+        }
+
+        // Render chart
+        function renderRiskChart(probability, riskLevel) {
+            const canvas = document.getElementById('risk-chart');
+            if (!canvas) return;
+            
+            const riskPercent = Math.round(probability * 100);
+            const remaining = 100 - riskPercent;
+            const color = getRiskColor(riskLevel);
+            
+            if (riskChart) {
+                riskChart.destroy();
+            }
+            
+            riskChart = new Chart(canvas, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Risk', 'Safe'],
+                    datasets: [{
+                        data: [riskPercent, remaining],
+                        backgroundColor: [color, '#e3e7eb'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    cutout: '75%',
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: (context) => `${context.label}: ${context.parsed}%`
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Chat functionality
+        sendBtn.addEventListener('click', sendMessage);
+        userInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+        async function sendMessage() {
+            const message = userInput.value.trim();
+            if (!message) return;
+            
+            addUserMessage(message);
+            userInput.value = '';
+            
+            showTypingIndicator();
+            
+            try {
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        message: message,
+                        conversation_history: conversationHistory,
+                        risk_assessment: currentRiskAssessment
+                    })
+                });
+                
+                removeTypingIndicator();
+                
+                if (!response.ok) {
+                    throw new Error('Chat error');
+                }
+                
+                const data = await response.json();
+                conversationHistory = data.conversation_history || [];
+                addBotMessage(data.response);
+                
+            } catch (error) {
+                removeTypingIndicator();
+                addBotMessage('Sorry, I encountered an error. Please try again.');
+            }
+        }
+
+        function addUserMessage(message) {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'message user-message';
+            msgDiv.innerHTML = `
+                <div class="avatar"><i class="fas fa-user"></i></div>
+                <div class="message-content"><p>${escapeHtml(message)}</p></div>
+            `;
+            chatMessages.appendChild(msgDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function addBotMessage(message) {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'message bot-message';
+            const formattedMessage = message
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\n/g, '<br>');
+            msgDiv.innerHTML = `
+                <div class="avatar"><i class="fas fa-robot"></i></div>
+                <div class="message-content"><p>${formattedMessage}</p></div>
+            `;
+            chatMessages.appendChild(msgDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function showTypingIndicator() {
+            const indicator = document.createElement('div');
+            indicator.className = 'message bot-message typing-indicator';
+            indicator.id = 'typing-indicator';
+            indicator.innerHTML = `
+                <div class="avatar"><i class="fas fa-robot"></i></div>
+                <div class="message-content">
+                    <p><i class="fas fa-circle"></i><i class="fas fa-circle"></i><i class="fas fa-circle"></i></p>
+                </div>
+            `;
+            chatMessages.appendChild(indicator);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function removeTypingIndicator() {
+            const indicator = document.getElementById('typing-indicator');
+            if (indicator) indicator.remove();
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Initialize with welcome message
+        document.addEventListener('DOMContentLoaded', function() {
+            addBotMessage("Hello! I'm your Dengue Health Assistant. Fill out the patient form to assess dengue risk, and I'll provide personalized health recommendations. Feel free to ask me any questions!");
+        });
+    </script>
+</body>
+</html>
