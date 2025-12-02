@@ -10,6 +10,37 @@ const areaSelect = document.getElementById('area');
 // Conversation history for chat
 let conversationHistory = [];
 let currentRiskAssessment = null;
+let riskChart = null;
+let chartDependenciesRegistered = false;
+
+const riskChartCenterTextPlugin = {
+    id: 'riskChartCenterTextPlugin',
+    afterDraw(chart) {
+        const centerText = chart.config?.options?.plugins?.centerText;
+        if (!centerText) return;
+
+        const meta = chart.getDatasetMeta(0);
+        if (!meta || !meta.data || !meta.data.length) return;
+
+        const centerPoint = meta.data[0].getProps(['x', 'y'], true);
+        const { ctx } = chart;
+
+        ctx.save();
+        ctx.fillStyle = centerText.color || '#333';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        ctx.font = `${centerText.fontWeight || 600} ${centerText.fontSize || 26}px ${centerText.fontFamily || 'Poppins'}`;
+        ctx.fillText(centerText.text || '', centerPoint.x, centerPoint.y - 10);
+
+        if (centerText.subtext) {
+            ctx.font = `${centerText.subFontWeight || 500} ${centerText.subFontSize || 13}px ${centerText.fontFamily || 'Poppins'}`;
+            ctx.fillText(centerText.subtext, centerPoint.x, centerPoint.y + 16);
+        }
+
+        ctx.restore();
+    }
+};
 
 // Area data by district (simplified for common areas)
 const areasByDistrict = {
@@ -344,20 +375,121 @@ function addBotMessage(message) {
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
+function ensureChartRegistration() {
+    if (typeof Chart === 'undefined') {
+        console.warn('Chart.js is not available. Skipping chart rendering.');
+        return false;
+    }
+
+    if (!chartDependenciesRegistered) {
+        if (Array.isArray(Chart.registerables)) {
+            Chart.register(...Chart.registerables);
+        }
+        chartDependenciesRegistered = true;
+    }
+
+    return true;
+}
+
+function getRiskColor(riskLevel) {
+    switch ((riskLevel || '').toLowerCase()) {
+        case 'high':
+            return '#f44336';
+        case 'medium':
+            return '#ff9800';
+        case 'low':
+            return '#4caf50';
+        default:
+            return '#2196f3';
+    }
+}
+
+function getRiskLabel(riskLevel) {
+    return riskLevel ? `${riskLevel} Risk` : 'Risk Level';
+}
+
+function renderRiskChart(probability, riskLevel) {
+    if (!ensureChartRegistration()) {
+        return;
+    }
+
+    const canvas = document.getElementById('risk-chart');
+    if (!canvas) {
+        return;
+    }
+
+    const riskPercent = Math.round(Math.min(Math.max(probability * 100, 0), 100));
+    const remaining = Math.max(0, 100 - riskPercent);
+    const color = getRiskColor(riskLevel);
+
+    if (riskChart) {
+        riskChart.destroy();
+        riskChart = null;
+    }
+
+    riskChart = new Chart(canvas, {
+        type: 'doughnut',
+        data: {
+            labels: ['Risk Probability', 'Remaining'],
+            datasets: [{
+                data: [riskPercent, remaining],
+                backgroundColor: [color, '#e3e7eb'],
+                hoverBackgroundColor: [color, '#d4d9dd'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '70%',
+            layout: {
+                padding: 10
+            },
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label(context) {
+                            return `${context.label}: ${context.parsed}%`;
+                        }
+                    }
+                },
+                centerText: {
+                    text: `${riskPercent}%`,
+                    subtext: getRiskLabel(riskLevel),
+                    color,
+                    fontFamily: 'Poppins',
+                    fontSize: 28,
+                    fontWeight: 700,
+                    subFontSize: 14,
+                    subFontWeight: 500
+                }
+            }
+        },
+        plugins: [riskChartCenterTextPlugin]
+    });
+}
+
 function displayResults(result) {
-    const riskClass = result.risk_level.toLowerCase();
-    const riskColor = riskClass === 'high' ? '#f44336' : riskClass === 'medium' ? '#ff9800' : '#4caf50';
+    const riskLevel = result.risk_level || 'Unknown';
+    const riskClass = riskLevel.toLowerCase();
+    const riskColor = getRiskColor(riskLevel);
     
     resultsContainer.innerHTML = `
         <div class="risk-result">
             <div class="risk-badge ${riskClass}">
-                ${result.risk_level.toUpperCase()} RISK
+                ${riskLevel.toUpperCase()} RISK
             </div>
             <div class="risk-percentage" style="color: ${riskColor}">
                 ${Math.round(result.probability * 100)}%
             </div>
             <div class="risk-description">
                 <p>Based on the patient profile and location data, the calculated dengue risk probability is <strong>${Math.round(result.probability * 100)}%</strong>.</p>
+            </div>
+            <div class="risk-chart-container">
+                <canvas id="risk-chart"></canvas>
             </div>
             
             <div class="recommendations">
@@ -381,6 +513,8 @@ function displayResults(result) {
             ` : ''}
         </div>
     `;
+
+    renderRiskChart(result.probability, result.risk_level);
 }
 
 // Initialize with a welcome message

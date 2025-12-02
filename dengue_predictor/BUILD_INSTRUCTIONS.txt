@@ -1,0 +1,74 @@
+================================================================================
+DENGUE RISK PREDICTOR - BUILDING EXECUTABLE (.exe) INSTRUCTIONS
+================================================================================
+
+QUICK BUILD (Windows):
+---------------------
+1. Open Command Prompt in the dengue_predictor folder
+2. Run: python build_exe.py
+   OR
+   Double-click: build_exe_simple.bat
+
+The executable will be created in the 'dist' folder.
+
+================================================================================
+STEP-BY-STEP INSTRUCTIONS:
+================================================================================
+
+1. INSTALL PYINSTALLER:
+   --------------------
+   pip install pyinstaller
+
+2. BUILD THE EXECUTABLE:
+   ---------------------
+   python build_exe.py
+
+3. FIND THE EXECUTABLE:
+   --------------------
+   Location: dengue_predictor/dist/DengueRiskPredictor.exe
+
+4. SET UP FOR DISTRIBUTION:
+   -------------------------
+   - Copy DengueRiskPredictor.exe to a folder
+   - Create a .env file in the same folder with:
+     GOOGLE_API_KEY=your_key_here
+     PINECONE_API_KEY=your_key_here
+   - Copy the README_EXE.md for end users
+
+================================================================================
+IMPORTANT NOTES:
+================================================================================
+
+- The executable includes all dependencies but NOT the .env file
+- Users must create their own .env file with API keys
+- The executable size will be large (100-200 MB) - this is normal
+- First startup may take 10-30 seconds
+- Requires internet connection for API calls
+
+================================================================================
+TROUBLESHOOTING:
+================================================================================
+
+If build fails:
+- Make sure all dependencies are installed: pip install -r requirment.txt
+- Check that PyInstaller is installed: pip install pyinstaller
+- Try building with --console flag to see errors
+
+If executable doesn't work:
+- Check that .env file exists with valid API keys
+- Ensure ports 8000 and 8001 are available
+- Run with --console flag to see error messages
+
+================================================================================
+FILES CREATED:
+================================================================================
+
+- build_exe.py          : Main build script
+- start_full_system_exe.py : Executable startup script
+- build_exe_simple.bat  : Windows batch file for easy building
+- BUILD_EXE.md          : Detailed documentation
+- README_EXE.md         : End user instructions
+
+================================================================================
+
+

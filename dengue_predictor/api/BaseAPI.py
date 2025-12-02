@@ -7,28 +7,106 @@ from typing import Dict, List, Optional
 import sys
 import os
 
-# Add the parent directory to the path to import from db
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'db'))
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'agents'))
+# Setup paths for imports (works in both development and executable mode)
+def setup_import_paths():
+    """Setup sys.path for importing modules"""
+    if getattr(sys, 'frozen', False):
+        # Running as executable - use _MEIPASS
+        if hasattr(sys, '_MEIPASS'):
+            base_path = sys._MEIPASS
+            # Add base path and subdirectories to sys.path
+            if base_path not in sys.path:
+                sys.path.insert(0, base_path)
+        else:
+            base_path = None
+    else:
+        # Running as script - add parent directory to path
+        base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        if base_path not in sys.path:
+            sys.path.insert(0, base_path)
+    
+    return base_path
 
-# Import from PineconeDB
-try:
-    from PineconeDB import add_case_to_vector_db
-except ImportError:
-    # If direct import fails, try with full path
-    from ..db.PineconeDB import add_case_to_vector_db
+# Setup paths first
+setup_import_paths()
 
-# Import from AI_Agent
+# Import from PineconeDB - try multiple import strategies
+add_case_to_vector_db = None
 try:
-    from AI_Agent import chat_with_dengue_agent
+    # Try 1: Direct import (when in sys.path)
+    from db.PineconeDB import add_case_to_vector_db
 except ImportError:
-    # If direct import fails, try with full path
-    from ..agents.AI_Agent import chat_with_dengue_agent
+    try:
+        # Try 2: Absolute import from package
+        from db import PineconeDB
+        add_case_to_vector_db = PineconeDB.add_case_to_vector_db
+    except ImportError:
+        try:
+            # Try 3: Direct module import
+            import db.PineconeDB as PineconeDB
+            add_case_to_vector_db = PineconeDB.add_case_to_vector_db
+        except ImportError:
+            # Try 4: Import from file path
+            import importlib.util
+            if getattr(sys, 'frozen', False):
+                db_file = os.path.join(sys._MEIPASS, 'db', 'PineconeDB.py')
+            else:
+                db_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'db', 'PineconeDB.py')
+            if os.path.exists(db_file):
+                spec = importlib.util.spec_from_file_location("PineconeDB", db_file)
+                pinecone_db = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(pinecone_db)
+                add_case_to_vector_db = pinecone_db.add_case_to_vector_db
+
+if add_case_to_vector_db is None:
+    raise ImportError("Could not import add_case_to_vector_db from PineconeDB")
+
+# Import from AI_Agent - try multiple import strategies
+chat_with_dengue_agent = None
+try:
+    # Try 1: Direct import (when in sys.path)
+    from agents.AI_Agent import chat_with_dengue_agent
+except ImportError:
+    try:
+        # Try 2: Absolute import from package
+        from agents import AI_Agent
+        chat_with_dengue_agent = AI_Agent.chat_with_dengue_agent
+    except ImportError:
+        try:
+            # Try 3: Direct module import
+            import agents.AI_Agent as AI_Agent
+            chat_with_dengue_agent = AI_Agent.chat_with_dengue_agent
+        except ImportError:
+            # Try 4: Import from file path
+            import importlib.util
+            if getattr(sys, 'frozen', False):
+                agent_file = os.path.join(sys._MEIPASS, 'agents', 'AI_Agent.py')
+            else:
+                agent_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'agents', 'AI_Agent.py')
+            if os.path.exists(agent_file):
+                spec = importlib.util.spec_from_file_location("AI_Agent", agent_file)
+                ai_agent = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(ai_agent)
+                chat_with_dengue_agent = ai_agent.chat_with_dengue_agent
+
+if chat_with_dengue_agent is None:
+    raise ImportError("Could not import chat_with_dengue_agent from AI_Agent")
 
 app = FastAPI(title="Dengue Risk Prediction API")
 
 # Load your trained model from the correct path
-model_path = os.path.join(os.path.dirname(__file__), '..', 'core', 'models', 'logistic_regression_model.joblib')
+# Handle both development and PyInstaller executable paths
+def get_model_path():
+    """Get the model path, works for both development and executable"""
+    if getattr(sys, 'frozen', False):
+        # Running as compiled executable
+        base_path = sys._MEIPASS
+        return os.path.join(base_path, 'core', 'models', 'logistic_regression_model.joblib')
+    else:
+        # Running as script
+        return os.path.join(os.path.dirname(__file__), '..', 'core', 'models', 'logistic_regression_model.joblib')
+
+model_path = get_model_path()
 model = joblib.load(model_path)
 
 class PatientData(BaseModel):

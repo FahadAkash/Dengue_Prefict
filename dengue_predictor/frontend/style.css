@@ -285,6 +285,19 @@ body {
     margin-bottom: 25px;
 }
 
+.risk-chart-container {
+    position: relative;
+    margin: 0 auto 30px;
+    width: 100%;
+    max-width: 320px;
+    height: 240px;
+}
+
+.risk-chart-container canvas {
+    width: 100% !important;
+    height: 100% !important;
+}
+
 .recommendations,
 .key-factors {
     text-align: left;
@@ -493,6 +506,36 @@ body {
     border-top: 1px solid #e9ecef;
 }
 
+.footer .team-info {
+    margin-top: 15px;
+}
+
+.footer .team-info h4 {
+    margin: 0 0 10px;
+    font-weight: 600;
+    color: #495057;
+}
+
+.footer .team-info ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.footer .team-info li {
+    color: #495057;
+    font-size: 0.95rem;
+}
+
+.footer .team-info .team-name {
+    font-weight: 600;
+    color: #212529;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     body {
@@ -565,5 +608,9 @@ body {
     .checkbox-group {
         flex-direction: column;
         gap: 10px;
+    }
+
+    .risk-chart-container {
+        height: 200px;
     }
 }

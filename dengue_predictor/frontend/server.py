@@ -6,17 +6,34 @@ import urllib.parse
 import urllib.request
 import urllib.error
 
+def get_frontend_dir():
+    """Get the frontend directory path, works for both development and executable"""
+    if getattr(sys, 'frozen', False):
+        # Running as compiled executable
+        # Frontend files should be in the same directory as the executable
+        base_path = os.path.dirname(sys.executable)
+        frontend_path = os.path.join(base_path, 'frontend')
+        if os.path.exists(frontend_path):
+            return frontend_path
+        # Fallback: try current directory
+        return os.path.dirname(os.path.abspath(__file__))
+    else:
+        # Running as script
+        return os.path.dirname(os.path.abspath(__file__))
+
+FRONTEND_DIR = get_frontend_dir()
+
 class DengueRequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         # Determine the file to serve
         if self.path == '/':
-            filepath = 'index.html'
+            filepath = os.path.join(FRONTEND_DIR, 'index.html')
         elif self.path == '/style.css':
-            filepath = 'style.css'
+            filepath = os.path.join(FRONTEND_DIR, 'style.css')
         elif self.path == '/script.js':
-            filepath = 'script.js'
+            filepath = os.path.join(FRONTEND_DIR, 'script.js')
         else:
-            filepath = self.path.lstrip('/')
+            filepath = os.path.join(FRONTEND_DIR, self.path.lstrip('/'))
         
         # Check if file exists
         if os.path.exists(filepath) and os.path.isfile(filepath):
@@ -44,8 +61,9 @@ class DengueRequestHandler(BaseHTTPRequestHandler):
                 self.send_error(500, f"Error reading file: {e}")
         else:
             # Serve index.html for any other path (SPA routing)
-            if os.path.exists('index.html'):
-                with open('index.html', 'rb') as f:
+            index_path = os.path.join(FRONTEND_DIR, 'index.html')
+            if os.path.exists(index_path):
+                with open(index_path, 'rb') as f:
                     content = f.read()
                 
                 self.send_response(200)
@@ -166,12 +184,13 @@ class DengueRequestHandler(BaseHTTPRequestHandler):
 
 def run_server():
     # Change to the frontend directory
-    os.chdir(os.path.dirname(os.path.abspath(__file__)))
+    os.chdir(FRONTEND_DIR)
     
     # Start the server
     server_address = ('', 8000)
     httpd = HTTPServer(server_address, DengueRequestHandler)
     print("Dengue Risk Predictor Frontend Server")
+    print(f"Serving from: {FRONTEND_DIR}")
     print("Serving at http://localhost:8000")
     print("Forwarding API requests to backend at http://localhost:8001")
     print("Press Ctrl+C to stop the server")

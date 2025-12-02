@@ -6,27 +6,76 @@ import sys
 import pandas as pd
 from collections import Counter
 
-# Add the parent directory to the path to import from db
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'db'))
+# Setup paths for imports (works in both development and executable mode)
+def setup_import_paths():
+    """Setup sys.path for importing modules"""
+    if getattr(sys, 'frozen', False):
+        # Running as executable - use _MEIPASS
+        base_path = sys._MEIPASS
+        db_path = os.path.join(base_path, 'db')
+    else:
+        # Running as script
+        base_path = os.path.dirname(os.path.abspath(__file__))
+        db_path = os.path.join(base_path, '..', 'db')
+    
+    # Add to path if not already there
+    db_path = os.path.abspath(db_path)
+    if db_path not in sys.path:
+        sys.path.insert(0, db_path)
+    
+    return db_path
+
+# Setup paths
+db_path = setup_import_paths()
 
 # Import from PineconeDB
 try:
     from PineconeDB import search_similar_cases, get_area_statistics, add_case_to_vector_db
 except ImportError:
-    # If direct import fails, try with full path
-    from ..db.PineconeDB import search_similar_cases, get_area_statistics, add_case_to_vector_db
+    try:
+        # Try relative import
+        from db.PineconeDB import search_similar_cases, get_area_statistics, add_case_to_vector_db
+    except ImportError:
+        # Try absolute import with path
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("PineconeDB", os.path.join(db_path, "PineconeDB.py"))
+        pinecone_db = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(pinecone_db)
+        search_similar_cases = pinecone_db.search_similar_cases
+        get_area_statistics = pinecone_db.get_area_statistics
+        add_case_to_vector_db = pinecone_db.add_case_to_vector_db
 
 # Initialize
 api_key = os.getenv("GOOGLE_API_KEY")
 if not api_key:
     raise ValueError("GOOGLE_API_KEY environment variable not set")
 
-# Load model from the correct path
-model_path = os.path.join(os.path.dirname(__file__), '..', 'core', 'models', 'logistic_regression_model.joblib')
+# Load model from the correct path (handles both development and executable)
+def get_model_path():
+    """Get the model path, works for both development and executable"""
+    if getattr(sys, 'frozen', False):
+        # Running as compiled executable
+        base_path = sys._MEIPASS
+        return os.path.join(base_path, 'core', 'models', 'logistic_regression_model.joblib')
+    else:
+        # Running as script
+        return os.path.join(os.path.dirname(__file__), '..', 'core', 'models', 'logistic_regression_model.joblib')
+
+def get_dataset_path():
+    """Get the dataset path, works for both development and executable"""
+    if getattr(sys, 'frozen', False):
+        # Running as compiled executable
+        base_path = sys._MEIPASS
+        return os.path.join(base_path, 'datasets', 'dataset.csv')
+    else:
+        # Running as script
+        return os.path.join(os.path.dirname(__file__), '..', 'datasets', 'dataset.csv')
+
+model_path = get_model_path()
 model = joblib.load(model_path)
 
 # Load dataset for statistical analysis (but not for sending to Gemini)
-dataset_path = os.path.join(os.path.dirname(__file__), '..', 'datasets', 'dataset.csv')
+dataset_path = get_dataset_path()
 dataset_df = None
 try:
     if os.path.exists(dataset_path):
